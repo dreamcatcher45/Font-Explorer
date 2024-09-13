@@ -1,0 +1,8 @@
+[package]
+name = "font_explorer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+druid = "0.8.3"
+font-kit = "0.11.0"
