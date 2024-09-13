@@ -1,5 +1,9 @@
-use druid::widget::{Flex, Label, TextBox};
-use druid::{AppLauncher, Data, Lens, Widget, WidgetExt, WindowDesc};
+use druid::widget::{Flex, Label, List, TextBox};
+use druid::{
+    AppLauncher, Data, Lens, Widget, WidgetExt, WindowDesc,
+    piet::{FontFamily, Text, TextLayout, TextLayoutBuilder},
+    widget::prelude::*,
+};
 use font_kit::source::SystemSource;
 use std::sync::Arc;
 
@@ -9,29 +13,95 @@ struct AppState {
     fonts: Arc<Vec<String>>,
 }
 
+#[derive(Clone, Data, Lens)]
+struct FontPreview {
+    font: Arc<String>,
+    text: String,
+}
+
+struct FontListLens;
+
+impl Lens<AppState, Arc<Vec<FontPreview>>> for FontListLens {
+    fn with<V, F: FnOnce(&Arc<Vec<FontPreview>>) -> V>(&self, data: &AppState, f: F) -> V {
+        let font_previews = Arc::new(
+            data.fonts
+                .iter()
+                .map(|font| FontPreview {
+                    font: Arc::new(font.clone()),
+                    text: data.input.clone(),
+                })
+                .collect(),
+        );
+        f(&font_previews)
+    }
+
+    fn with_mut<V, F: FnOnce(&mut Arc<Vec<FontPreview>>) -> V>(&self, data: &mut AppState, f: F) -> V {
+        let mut font_previews = Arc::new(
+            data.fonts
+                .iter()
+                .map(|font| FontPreview {
+                    font: Arc::new(font.clone()),
+                    text: data.input.clone(),
+                })
+                .collect(),
+        );
+        let result = f(&mut font_previews);
+        // We don't need to update AppState here as the list is read-only
+        result
+    }
+}
+
+struct FontLabel;
+
+impl Widget<FontPreview> for FontLabel {
+    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut FontPreview, _env: &Env) {}
+
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &FontPreview, _env: &Env) {}
+
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &FontPreview, _data: &FontPreview, _env: &Env) {}
+
+    fn layout(&mut self, ctx: &mut LayoutCtx, _bc: &BoxConstraints, data: &FontPreview, env: &Env) -> Size {
+        let font = ctx.text().font_family(&data.font).unwrap_or_else(|| FontFamily::SYSTEM_UI);
+        let layout = ctx.text().new_text_layout(data.text.clone())
+            .font(font, env.get(druid::theme::TEXT_SIZE_NORMAL))
+            .text_color(env.get(druid::theme::TEXT_COLOR))
+            .build()
+            .unwrap();
+        layout.size()
+    }
+
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &FontPreview, env: &Env) {
+        let font = ctx.text().font_family(&data.font).unwrap_or_else(|| FontFamily::SYSTEM_UI);
+        let layout = ctx.text().new_text_layout(data.text.clone())
+            .font(font, env.get(druid::theme::TEXT_SIZE_NORMAL))
+            .text_color(env.get(druid::theme::TEXT_COLOR))
+            .build()
+            .unwrap();
+        ctx.draw_text(&layout, (0.0, 0.0));
+    }
+}
+
 fn build_ui() -> impl Widget<AppState> {
     let input = TextBox::new()
         .with_placeholder("Enter text to preview")
         .lens(AppState::input)
         .expand_width();
 
-    let font_list = Label::dynamic(|data: &AppState, _env| {
-        data.fonts
-            .iter()
-            .map(|font| format!("{}: {}", font, data.input))
-            .collect::<Vec<_>>()
-            .join("\n")
+    let font_list = List::new(|| {
+        Flex::row()
+            .with_child(Label::new(|item: &FontPreview, _env: &_| format!("{}: ", item.font)).with_text_size(16.0))
+            .with_flex_child(FontLabel, 1.0)
+            .padding(5.0)
     })
-    .with_text_size(16.0)
-    .padding(10.0)
+    .lens(FontListLens)
+    .scroll()
+    .vertical()
     .expand_width();
 
     Flex::column()
         .with_child(input)
         .with_spacer(20.0)
-        .with_child(font_list)
-        .scroll()
-        .vertical()
+        .with_flex_child(font_list, 1.0)
         .padding(20.0)
 }
 
