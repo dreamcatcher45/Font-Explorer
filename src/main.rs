@@ -1,4 +1,4 @@
-use druid::widget::{Flex, List, TextBox, Scroll};
+use druid::widget::{Flex, List, TextBox};
 use druid::{
     AppLauncher, Data, Lens, Widget, WidgetExt, WindowDesc,
     piet::{FontFamily, Text, TextLayout, TextLayoutBuilder},
@@ -140,7 +140,7 @@ fn main() {
     };
 
     let main_window = WindowDesc::new(build_ui())
-        .title("Font Preview App")
+        .title("Font Explorer")
         .window_size((1200.0, 900.0));
 
     AppLauncher::with_window(main_window)
