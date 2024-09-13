@@ -1,4 +1,4 @@
-use druid::widget::{Flex, Label, List, TextBox};
+use druid::widget::{Flex, Label, List, TextBox, SizedBox};
 use druid::{
     AppLauncher, Data, Lens, Widget, WidgetExt, WindowDesc,
     piet::{FontFamily, Text, TextLayout, TextLayoutBuilder},
@@ -46,7 +46,6 @@ impl Lens<AppState, Arc<Vec<FontPreview>>> for FontListLens {
                 .collect(),
         );
         let result = f(&mut font_previews);
-        // We don't need to update AppState here as the list is read-only
         result
     }
 }
@@ -60,10 +59,10 @@ impl Widget<FontPreview> for FontLabel {
 
     fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &FontPreview, _data: &FontPreview, _env: &Env) {}
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, _bc: &BoxConstraints, data: &FontPreview, env: &Env) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &FontPreview, env: &Env) -> Size {
         let font = ctx.text().font_family(&data.font).unwrap_or_else(|| FontFamily::SYSTEM_UI);
         let layout = ctx.text().new_text_layout(data.text.clone())
-            .font(font, env.get(druid::theme::TEXT_SIZE_NORMAL))
+            .font(font, 32.0)
             .text_color(env.get(druid::theme::TEXT_COLOR))
             .build()
             .unwrap();
@@ -73,7 +72,7 @@ impl Widget<FontPreview> for FontLabel {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &FontPreview, env: &Env) {
         let font = ctx.text().font_family(&data.font).unwrap_or_else(|| FontFamily::SYSTEM_UI);
         let layout = ctx.text().new_text_layout(data.text.clone())
-            .font(font, env.get(druid::theme::TEXT_SIZE_NORMAL))
+            .font(font, 32.0)
             .text_color(env.get(druid::theme::TEXT_COLOR))
             .build()
             .unwrap();
@@ -89,9 +88,19 @@ fn build_ui() -> impl Widget<AppState> {
 
     let font_list = List::new(|| {
         Flex::row()
-            .with_child(Label::new(|item: &FontPreview, _env: &_| format!("{}: ", item.font)).with_text_size(16.0))
-            .with_flex_child(FontLabel, 1.0)
-            .padding(5.0)
+            .with_flex_child(
+                SizedBox::new(FontLabel)
+                    .expand_width()
+                    .padding((0., 0., 20., 0.)), // Add right padding to create more space
+                1.0
+            )
+            .with_child(
+                Label::new(|item: &FontPreview, _env: &_| item.font.to_string())
+                    .with_text_size(14.0)
+                    .fix_width(200.0) // Increased width for font names
+            )
+            .must_fill_main_axis(true)
+            .padding(10.0)
     })
     .lens(FontListLens)
     .scroll()
@@ -121,7 +130,7 @@ fn main() {
 
     let main_window = WindowDesc::new(build_ui())
         .title("Font Preview App")
-        .window_size((400.0, 600.0));
+        .window_size((1200.0, 900.0)); // Increased window width
 
     AppLauncher::with_window(main_window)
         .launch(initial_state)
