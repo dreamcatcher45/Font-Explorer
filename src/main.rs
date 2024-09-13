@@ -16,7 +16,7 @@ fn build_ui() -> impl Widget<AppState> {
         .expand_width();
 
     let font_list = List::new(|| {
-        Label::dynamic(|data: &String, _env| {
+        Label::new(|data: &String, _env: &_| {
             format!("{}: Sample Text", data)
         })
         .with_text_size(16.0)
@@ -25,12 +25,14 @@ fn build_ui() -> impl Widget<AppState> {
     })
     .lens(AppState::fonts);
 
-    let scroll_font_list = Scroll::new(font_list).vertical();
+    let scroll_font_list = Scroll::new(font_list)
+        .vertical()
+        .expand_height();
 
     Flex::column()
         .with_child(input)
         .with_spacer(20.0)
-        .with_child(scroll_font_list)
+        .with_flex_child(scroll_font_list, 1.0)
         .padding(20.0)
 }
 
