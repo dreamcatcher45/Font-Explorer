@@ -10,6 +10,9 @@ Font Explorer is a fast, open-source Windows application built with Rust that al
 - **User-Friendly Interface**: Easy-to-use interface for seamless font exploration.
 - **Open Source**: Freely available for use, modification, and distribution under [insert license here].
 
+## Preview
+
+![Preview](https://raw.githubusercontent.com/dreamcatcher45/Font-Explorer/master/preview.png?token=GHSAT0AAAAAACVZWQQ7DWKD37R2UTKNVD6OZXEMNEQ)
 
 ## Usage
 
