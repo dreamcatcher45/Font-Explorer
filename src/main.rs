@@ -1,8 +1,8 @@
-use druid::widget::{Flex, Label, List, TextBox, SizedBox};
+use druid::widget::{Flex, List, TextBox, Scroll};
 use druid::{
     AppLauncher, Data, Lens, Widget, WidgetExt, WindowDesc,
     piet::{FontFamily, Text, TextLayout, TextLayoutBuilder},
-    widget::prelude::*,
+    widget::prelude::*, Size, Point,
 };
 use font_kit::source::SystemSource;
 use std::sync::Arc;
@@ -57,7 +57,11 @@ impl Widget<FontPreview> for FontLabel {
 
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &FontPreview, _env: &Env) {}
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &FontPreview, _data: &FontPreview, _env: &Env) {}
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &FontPreview, data: &FontPreview, _env: &Env) {
+        if old_data.text != data.text || old_data.font != data.font {
+            ctx.request_layout();
+        }
+    }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &FontPreview, env: &Env) -> Size {
         let font = ctx.text().font_family(&data.font).unwrap_or_else(|| FontFamily::SYSTEM_UI);
@@ -66,7 +70,13 @@ impl Widget<FontPreview> for FontLabel {
             .text_color(env.get(druid::theme::TEXT_COLOR))
             .build()
             .unwrap();
-        layout.size()
+        let text_size = layout.size();
+        let available_width = bc.max().width;
+        let label_width = 200.0;
+        let spacing = 20.0;
+        let max_text_width = available_width - label_width - spacing;
+        
+        Size::new(available_width, text_size.height.max(32.0))
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &FontPreview, env: &Env) {
@@ -76,7 +86,22 @@ impl Widget<FontPreview> for FontLabel {
             .text_color(env.get(druid::theme::TEXT_COLOR))
             .build()
             .unwrap();
-        ctx.draw_text(&layout, (0.0, 0.0));
+        let text_size = layout.size();
+        let available_width = ctx.size().width;
+        let label_width = 200.0;
+        let spacing = 20.0;
+        let max_text_width = available_width - label_width - spacing;
+        
+        ctx.draw_text(&layout, Point::ORIGIN);
+        
+        // Draw the font name label
+        let label_layout = ctx.text().new_text_layout(data.font.to_string())
+            .font(FontFamily::SYSTEM_UI, 14.0)
+            .text_color(env.get(druid::theme::TEXT_COLOR))
+            .build()
+            .unwrap();
+        let label_x = (text_size.width + spacing).min(max_text_width + spacing);
+        ctx.draw_text(&label_layout, Point::new(label_x, (text_size.height - 14.0) / 2.0));
     }
 }
 
@@ -86,26 +111,12 @@ fn build_ui() -> impl Widget<AppState> {
         .lens(AppState::input)
         .expand_width();
 
-    let font_list = List::new(|| {
-        Flex::row()
-            .with_flex_child(
-                SizedBox::new(FontLabel)
-                    .expand_width()
-                    .padding((0., 0., 20., 0.)), // Add right padding to create more space
-                1.0
-            )
-            .with_child(
-                Label::new(|item: &FontPreview, _env: &_| item.font.to_string())
-                    .with_text_size(14.0)
-                    .fix_width(200.0) // Increased width for font names
-            )
-            .must_fill_main_axis(true)
-            .padding(10.0)
-    })
-    .lens(FontListLens)
-    .scroll()
-    .vertical()
-    .expand_width();
+    let font_list = List::new(|| FontLabel)
+        .lens(FontListLens)
+        .scroll()
+        .vertical()
+        .expand_width()
+        .expand_height();
 
     Flex::column()
         .with_child(input)
@@ -130,7 +141,7 @@ fn main() {
 
     let main_window = WindowDesc::new(build_ui())
         .title("Font Preview App")
-        .window_size((1200.0, 900.0)); // Increased window width
+        .window_size((1200.0, 900.0));
 
     AppLauncher::with_window(main_window)
         .launch(initial_state)
